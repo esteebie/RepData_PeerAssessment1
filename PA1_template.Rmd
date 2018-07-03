@@ -7,19 +7,100 @@ output:
 
 
 ## Loading and preprocessing the data
-
-
+```{r}
+setwd("/Users/esteebie/Documents/DATA/Courses/4. JHU/5. Reproducible Research/Project 1 - fitbit/RepData_PeerAssessment1-master")
+data <- read.csv("activity.csv")
+```
 
 ## What is mean total number of steps taken per day?
+Remove NAs amd then remove days with 0 steps - since these correspond to the removal of NAs.
+```{r}
+library(ggplot2)
+library(reshape2)
+totals <- (tapply(data$steps,data$date,sum, na.rm=TRUE))
+totals <- totals[totals !=0]
+dates <- names(totals)
+totals_df <- cbind(as.data.frame(totals),dates)
+ggplot(totals_df, aes(x=dates, y=totals)) +geom_bar(stat="identity")
+ggplot(totals_df,aes(x=totals)) +geom_histogram(bins=60)
+```
+The first plot shows the number of steps taken each day in sequence.
+The second plot shows the number of days that a certain number of steps were taken on. The most frequent number of steps attained on any given day is around 10,000.
 
-
+```{r}
+summary(totals_df$totals)[3:4]
+```
+These are the mean and median numbers of steps taken per day.
 
 ## What is the average daily activity pattern?
 
-
+```{r}
+averages <- tapply(data$steps,data$interval,mean,na.rm=TRUE)
+averages <- averages[averages !=0]
+interval <- names(averages)
+averages_df <- cbind(as.data.frame(averages),interval)
+averages_df$interval <- as.numeric(as.character(averages_df$interval))
+ggplot(averages_df, aes(x=interval,y=averages, group=1)) +geom_line()
+which.max(averages)
+```
+The 835th interval has the highest average (206 steps)
 
 ## Imputing missing values
+```{r}
+colSums(is.na(data))
+```
+2304 rows have missing values. Impute these by taking the average across all non-NA intervals.
 
+```{r}
+imputed <- data
+avg_int <- mean(data$steps, na.rm=TRUE)
+for (i in 1:dim(imputed)[1]) {
+  if (is.na(imputed$steps[i])) {
+    imputed$steps[i] <- avg_int
+  }
+}
+
+colSums(is.na(imputed))
+```
+
+
+```{r}
+imp_totals <- (tapply(imputed$steps,imputed$date,sum, na.rm=TRUE))
+imp_totals <- imp_totals[imp_totals !=0]
+dates <- names(imp_totals)
+imp_totals_df <- cbind(as.data.frame(imp_totals),dates)
+ggplot(imp_totals_df, aes(x=dates, y=imp_totals)) +geom_bar(stat="identity")
+ggplot(imp_totals_df,aes(x=imp_totals)) +geom_histogram(bins=60)
+```
+
+```{r}
+summary(imp_totals_df$imp_totals)[3:4]
+```
+
+Using this method of imputing, the mean remains the same but the median value has increased slightly from 10765 to 10766 (and is now the same as the mean).
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+imputed$date <- as.Date(imputed$date)
+imputed$wkdy <- as.factor(ifelse(weekdays(imputed$date) %in% c("Saturday","Sunday"),"weekend","weekday"))
+
+weekends <- tapply(imputed$steps[imputed$wkdy=="weekend"],imputed$interval[imputed$wkdy=="weekend"],mean)
+weekdays <- tapply(imputed$steps[imputed$wkdy=="weekday"],imputed$interval[imputed$wkdy=="weekday"],mean)
+
+interval <- names(weekdays)
+
+weekend <- as.vector(weekends)
+weekday <- as.vector(weekdays)
+
+df <- as.data.frame(cbind(weekend, weekday))
+df <- cbind(interval, df)
+
+df_mlt <- melt(df,id="interval", measure.vars=c("weekend","weekday"))
+colnames(df_mlt) <- c("interval","day_type","steps")
+
+df_mlt$interval <- as.numeric(as.character(df_mlt$interval))
+
+ggplot(df_mlt, aes(x=interval, y=steps, facet=day_type, group=1, colour=day_type)) +geom_line() +facet_grid(day_type~.) +scale_x_continuous(breaks=seq(0,2400,200))
+```
+
