@@ -166,3 +166,7 @@ https://github.com/rdpeng/RepData_PeerAssessment1
 
 7c376cc5447f11537f8740af8e07d6facc3d9645
 ```
+https://github.com/esteebie/RepData_PeerAssessment1
+
+My SHA-1:
+322934bd8ce447be61557e2e517207febecb3f54
